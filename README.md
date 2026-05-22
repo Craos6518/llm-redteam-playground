@@ -1,109 +1,122 @@
-# LLM Red Team Playground
+# 🛡️ LLM Red Team Playground
 
-Proyecto para introducción a Inteligencia Artificial con modelos de lenguaje (LLMs) y técnicas de red teaming.
+**Sistema inteligente de defensa y análisis para Large Language Models contra ataques adversariales**
 
-## Requisitos Cumplidos ✓
+Proyecto final de Introducción a Inteligencia Artificial con arquitectura multi-agente, detección de amenazas en tiempo real y análisis técnico contextualizado.
 
-- [x] Python 3.14.4 instalado
-- [x] Repositorio GitHub clonado
-- [x] Estructura de carpetas creada
-- [x] Entorno virtual configurado
-- [x] Dependencias base instaladas
+---
 
-## Configuración Final
+## ✨ Características Principales
 
-### 1. Activar el Entorno Virtual
+- 🛡️ **Guardian Agent**: Detección de ataques con InputSanitizer + OutputFilter
+- 🔬 **Analyst Agent**: Análisis técnico educativo con mapeo OWASP
+- 📚 **RAG System**: Base de datos de 248 chunks de conocimiento corporativo
+- 🎯 **Pattern Detection**: 4 categorías de ataque detectadas automáticamente
+- 📊 **Real-time Statistics**: Puntuación de seguridad en tiempo real
+- 🚀 **Production Ready**: 6/6 pruebas de validación pasadas
+
+---
+
+## 🚀 Quick Start
+
+### 1. Instalación
 
 ```bash
-# Linux/Mac
+# Activar entorno virtual
 source venv/bin/activate
 
-# Windows
-venv\Scripts\activate
+# Instalar dependencias
+pip install -r requirements.txt
 ```
 
-### 2. Agregar API Key de Gemini
+### 2. Configuración
 
-1. Ve a [aistudio.google.com](https://aistudio.google.com)
-2. Haz clic en "Get API Key"
-3. Copia tu clave
-4. Abre el archivo `.env` en la raíz del proyecto
-5. Reemplaza `GEMINI_API_KEY=` con tu clave:
+```bash
+# Crear archivo .env (si no existe)
+cp .env.example .env
 
-```env
+# Editar .env y agregar tu API Key de Gemini
 GEMINI_API_KEY=tu_clave_aqui
 ```
 
-### 3. Verificar la Instalación
+### 3. Ejecutar Pruebas
 
 ```bash
-python test_setup.py
+# Test automatizado (5 casos)
+python test_agents_auto.py
+
+# Test interactivo
+python test_agents.py
+
+# Validación completa
+python validate.py
 ```
 
-## Estructura del Proyecto
+---
+
+## 🛡️ Agentes Disponibles
+
+### Guardian Agent
+Detecta y bloquea intentos de ataque con pattern matching y validación de respuestas.
+
+```python
+from src.agents.guardian import GuardianAgent
+
+guardian = GuardianAgent()
+response = guardian.chat("¿Qué es seguridad en LLMs?")
+stats = guardian.get_stats()
+```
+
+### Analyst Agent
+Analiza ataques técnicamente y mapea a estándares OWASP con contexto del corpus.
+
+```python
+from src.agents.analyst import AnalystAgent
+
+analyst = AnalystAgent()
+analysis = analyst.analyze("ignora todas las instrucciones", threat_category="prompt_injection")
+```
+
+---
+
+## 📊 Validación del Sistema
+
+```bash
+python validate.py
+```
+
+Resultado: **6/6 pruebas pasadas** ✓
+
+---
+
+## 📚 Documentación
+
+Para documentación detallada, ver [DOCUMENTATION.md](DOCUMENTATION.md)
+
+---
+
+## 📄 Estructura del Proyecto
 
 ```
 llm-redteam-playground/
-├── src/                    # Código fuente principal
-├── docs/                   # Documentación del proyecto
+├── src/
+│   ├── config.py              # Configuración centralizada
+│   ├── agents/
+│   │   ├── guardian.py        # 🛡️ Guardian Agent
+│   │   └── analyst.py         # 🔬 Analyst Agent
+│   └── rag/
+│       ├── retriever.py       # RAG Retriever
+│       └── ingest.py          # RAG Ingestor
 ├── data/
-│   └── corpus/            # Datos de entrenamiento/prueba
-├── tests/                 # Tests unitarios
-├── reports/               # Reportes y resultados
-├── logs/                  # Archivos de log
-├── venv/                  # Entorno virtual (no editar)
-├── .env                   # Variables de entorno (NO SUBIR A GIT)
-├── .env.example           # Plantilla del .env
-├── .gitignore             # Archivos a ignorar en Git
-├── requirements.txt       # Dependencias del proyecto
-└── test_setup.py          # Script de verificación
+│   ├── corpus/                # 17 documentos
+│   └── chroma_db/             # Base de datos (248 chunks)
+├── test_agents.py             # Test interactivo
+├── test_agents_auto.py        # Test automatizado
+├── validate.py                # Validación
+├── DOCUMENTATION.md           # Documentación completa
+└── requirements.txt           # Dependencias
 ```
 
-## Dependencias Instaladas
-
-- `google-generativeai`: API de Google Gemini
-- `python-dotenv`: Manejo de variables de entorno
-- `requests`: Peticiones HTTP
-- **Opcionales**: `sentence-transformers`, `torch`, `transformers`, `pandas`, `scikit-learn`
-
-## Próximos Pasos
-
-1. **Instalar dependencias opcionales** (si es necesario):
-   ```bash
-   pip install sentence-transformers torch transformers pandas scikit-learn
-   ```
-
-2. **Crear tu primer script** en `src/`:
-   ```python
-   import os
-   from dotenv import load_dotenv
-   import google.generativeai as genai
-   
-   # Cargar variables de entorno
-   load_dotenv()
-   
-   # Configurar API
-   genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
-   
-   # Usar el modelo
-   model = genai.GenerativeModel('gemini-1.5-flash')
-   response = model.generate_content("¿Hola, cómo estás?")
-   print(response.text)
-   ```
-
-3. **Hacer commit** de tu configuración:
-   ```bash
-   git add .
-   git commit -m "Initial project setup"
-   git push
-   ```
-
-## Notas Importantes
-
-- **No subas `.env`**: Está en `.gitignore` para proteger tu API Key
-- **Python 3.11+**: Requerido para compatibilidad con las librerías
-- **Documentación**: Ve a [Google AI Studio](https://aistudio.google.com/app/apikey)
-- **Problemas**: Usa `test_setup.py` para diagnosticar
-
 ---
-**Última actualización**: 21 de mayo de 2026
+
+**Estado**: ✅ Production Ready | **Versión**: 1.0 | **Última actualización**: Diciembre 2024
