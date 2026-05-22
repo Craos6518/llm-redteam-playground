@@ -1,0 +1,26 @@
+# API de Google Gemini (nuevo paquete)
+google-genai>=0.1.0
+
+# NLP y embeddings
+sentence-transformers>=2.2.0
+transformers>=4.30.0
+torch>=2.0.0
+
+# Procesamiento de datos
+numpy>=1.24.0
+pandas>=2.0.0
+scikit-learn>=1.3.0
+
+# Utilidades
+python-dotenv>=1.0.0
+requests>=2.31.0
+
+# RAG y vectores
+chromadb>=0.4.0
+
+# Testing
+pytest>=7.4.0
+pytest-cov>=4.1.0
+
+# Logging y monitoring
+loguru>=0.7.0
