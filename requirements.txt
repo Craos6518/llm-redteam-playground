@@ -2,9 +2,9 @@
 google-genai>=0.1.0
 
 # NLP y embeddings
-sentence-transformers>=2.2.0
-transformers>=4.30.0
-torch>=2.0.0
+# El proyecto usa embeddings locales ligeros en src/rag/ingest.py,
+# así que no instalamos por defecto el stack pesado de Torch/Transformers.
+# Si necesitas experimentos externos, instálalos manualmente en un entorno aparte.
 
 # Procesamiento de datos
 numpy>=1.24.0

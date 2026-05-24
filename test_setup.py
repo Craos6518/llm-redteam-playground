@@ -27,7 +27,7 @@ def test_imports():
     modules = [
         ("python-dotenv", "dotenv"),
         ("requests", "requests"),
-        ("google.generativeai", "google.generativeai"),
+        ("google-genai", "google.genai"),
     ]
     
     all_ok = True
