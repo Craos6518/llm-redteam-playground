@@ -1,103 +1,110 @@
 # 🏗️ Arquitectura del Sistema - LLM Red Teaming Playground
 
-## 1. Diagrama de Arquitectura General
+## 1. Diagrama de Arquitectura General (4 Capas)
 
 ```mermaid
 graph TB
-    User["👤 Usuario"]
-    
-    subgraph Streamlit["🎨 Interfaz Web (Streamlit)"]
-        Chat["💬 Chat Interface"]
-        Sidebar["📊 Panel de Estadísticas"]
-        History["📜 Historial de Chat"]
+    subgraph Data["📦 CAPA DE DATOS"]
+        Corpus["📚 Corpus\n(17 documentos MD)\nOWASP LLM01-09, Red Teaming"]
+        ChromaDB["🗄️ ChromaDB\n(Vector Database)\n248 chunks persistidos"]
     end
-    
-    subgraph Core["⚙️ Core (Motor de Análisis)"]
-        Guardian["🛡️ Guardian\n(Threat Detector)"]
-        Analyst["🔬 Analyst\n(Technical Analysis)"]
-        SessionMgr["📋 Session Manager\n(State)"]
+
+    subgraph Logic["⚙️ CAPA DE LÓGICA"]
+        Guardian["🛡️ Guardian Agent\nInputSanitizer\nOutputFilter\nEstadísticas"]
+        Analyst["🔬 Analyst Agent\nRAG Retriever\nOWASP Mapper\nCitaciones"]
+        RAGSystem["📡 RAG System\nIngestor\nChunking\nEmbeddings locales"]
     end
-    
-    subgraph RAG["🧠 RAG Pipeline"]
-        Retriever["🔍 Retriever\n(Query Embedding)"]
-        ChromaDB["💾 ChromaDB\n(Vector DB)"]
-        Corpus["📚 Knowledge Corpus\n(17 docs)"]
+
+    subgraph Tools["🔧 CAPA DE HERRAMIENTAS"]
+        GeminiAPI["🤖 Gemini API\n(google-genai 2.6.0)\ngemini-2.5-flash"]
+        Config["⚙️ Configuration\n(config.py)\nPrompts, timeouts"]
     end
-    
-    subgraph Export["📤 Export Layer"]
-        Exporter["📝 Report Exporter\n(Markdown)"]
-        MCPServer["🔗 MCP Server\n(Tools)"]
+
+    subgraph UI["👁️ CAPA DE PRESENTACIÓN"]
+        Console["💻 Console UI\n(test_agents.py)\nInteractive chat"]
+        Reports["📊 Reports\n(MCP Server)\n(report_server.py)"]
     end
+
+    %% Flujos de datos
+    Corpus -->|Ingesta| ChromaDB
+    ChromaDB -->|Retrieve| RAGSystem
+    RAGSystem -->|Top-3 chunks| Analyst
     
-    subgraph Files["📁 Storage"]
-        Reports["📄 Reports/\n(MD files)"]
-        Logs["📋 Logs/"]
-    end
+    Console -->|Usuario input| Guardian
+    Guardian -->|Sanitizar| Logic
+    Guardian -->|LLM call| GeminiAPI
+    GeminiAPI -->|Respuesta| Analyst
+    Analyst -->|RAG context| GeminiAPI
+    Analyst -->|Análisis + OWASP| Console
     
-    User -->|"prompts"| Chat
-    Chat -->|"user_input"| Guardian
-    Chat -->|"display"| History
+    Config -->|System prompts| Guardian
+    Config -->|System prompts| Analyst
     
-    Guardian -->|"threat_level"| SessionMgr
-    Guardian -->|"query"| Retriever
-    
-    Retriever -->|"semantic_search"| ChromaDB
-    ChromaDB -->|"vector_lookup"| Corpus
-    Corpus -->|"context"| Analyst
-    
-    Analyst -->|"analysis"| Chat
-    Analyst -->|"record"| SessionMgr
-    
-    SessionMgr -->|"session_data"| Exporter
-    SessionMgr -->|"vulnerabilities"| Exporter
-    
-    Exporter -->|"generate"| Reports
-    Exporter -->|"invoke_tools"| MCPServer
-    MCPServer -->|"call_tool"| Exporter
-    
-    SessionMgr -->|"metrics"| Sidebar
-    Sidebar -->|"download"| Reports
-    
-    Exporter -->|"logging"| Logs
+    Guardian -->|Stats| Reports
+    Analyst -->|Analysis + Citations| Reports
+
+    style Data fill:#e1f5ff,stroke:#01579b,stroke-width:2px
+    style Logic fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    style Tools fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    style UI fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px
 ```
+
+**Descripción de capas:**
+
+- **Capa de Datos**: Corpus de documentos y base de datos vectorial ChromaDB
+- **Capa de Lógica**: Agentes Guardian (detecta ataques) y Analyst (analiza con contexto RAG)
+- **Capa de Herramientas**: API Gemini y configuración centralizada
+- **Capa de Presentación**: Interfaz de consola e informes
 
 ---
 
-## 2. Pipeline de RAG (Retrieval-Augmented Generation)
+## 2. Diagrama del Flujo RAG (Retrieval-Augmented Generation)
 
 ```mermaid
 graph LR
-    Input["📝 User Query\n'Ignora instrucciones...'"]
+    Input["📝 User Query\n'Prompt injection...'"] -->|"User Input"| Guardian{{"🛡️ Guardian\nLegítimo?"}}
     
-    subgraph Embedding["🧮 Embedding Phase"]
-        Tokenize["1️⃣ Tokenize"]
-        Transform["2️⃣ SentenceTransformer\n(768-dim)"]
-        Vector["3️⃣ Query Vector"]
-    end
+    Guardian -->|"Ataque bloqueado"| Blocked["❌ BLOCKED\nResponse sent\nStatistics updated"]
     
-    subgraph Search["🔍 Search Phase"]
-        ChromaIndex["ChromaDB Index\n(17 docs × chunks)"]
-        Similarity["Cosine Similarity"]
-        TopK["Top-3 Results"]
-    end
+    Guardian -->|"Query segura"| Embedding["🧮 Embedding\nQuery → Vector\n(local hash-based)"]
     
-    subgraph Fusion["🔗 Fusion Phase"]
-        Combine["Combine Context"]
-        Rerank["Re-rank by Score"]
-        Final["Final Context"]
-    end
+    Embedding --> ChromaDB["🗄️ ChromaDB\nBúsqueda vectorial\nTop-3 candidates"]
     
-    subgraph Analysis["🔬 Analysis Phase"]
-        Analyst["Analyst LLM\nwith Context"]
-        Output["💬 Response\nto User"]
-    end
+    ChromaDB --> Rerank["🔄 Re-ranking\nRelevance scoring\nThreat classification"]
     
-    Input --> Tokenize
-    Tokenize --> Transform
-    Transform --> Vector
+    Rerank -->|"Top-3 chunks"| Context["📚 Context\nCombine with prompt\nAdd source citations"]
     
-    Vector --> ChromaIndex
-    ChromaIndex --> Similarity
+    Context --> Analyst["🔬 Analyst Agent\n+ RAG Context\n+ Gemini API"]
+    
+    Analyst -->|"OWASP Mapping"| Analysis["📊 Analysis\nThreat category\nDefense suggestions\nSource citations"]
+    
+    Analysis -->|"Response"| Console["💻 Console Output\nGuardian response\n+ Analyst analysis\n+ Statistics"]
+    
+    Console -->|"Report generation"| Report["📄 Report\n(MD or MCP)"]
+    
+    style Input fill:#e3f2fd
+    style Guardian fill:#fff3e0
+    style Blocked fill:#ffcdd2
+    style Embedding fill:#f3e5f5
+    style ChromaDB fill:#e0f2f1
+    style Rerank fill:#ede7f6
+    style Context fill:#f1f8e9
+    style Analyst fill:#fff9c4
+    style Analysis fill:#c8e6c9
+    style Console fill:#b3e5fc
+    style Report fill:#d1c4e9
+```
+
+**Fases del RAG:**
+
+1. **Input Validation**: Guardian valida input contra patrones de ataque
+2. **Embedding**: Query se convierte a vector (embeddings locales sin modelos pesados)
+3. **ChromaDB Search**: Búsqueda vectorial en 248 chunks indexados
+4. **Re-ranking**: Puntuación por relevancia y clasificación de amenaza
+5. **Context**: Combina top-3 chunks con prompt del Analyst
+6. **LLM Analysis**: Gemini API con contexto RAG completo
+7. **Output**: Respuesta + análisis + estadísticas + citas
+
     Similarity --> TopK
     
     TopK --> Combine
