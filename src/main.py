@@ -4,18 +4,26 @@ LLM Red Teaming Playground - Interfaz Principal con Streamlit
 Integra Guardian, Analyst, RAG y el servidor MCP para exportación de reportes
 """
 
+import sys
+from pathlib import Path
+
+# Agregar src al path para imports (necesario cuando Streamlit ejecuta como script principal)
+sys.path.insert(0, str(Path(__file__).parent))
+
 import streamlit as st
 from datetime import datetime
-from pathlib import Path
 from typing import List, Dict, Optional
 import json
 
-# Importar componentes
-from src.guardian import Guardian
-from src.analyst import Analyst
-from src.rag.retriever import RAGRetriever
-from src.skills.exporter import Vulnerability
-from src.mcp.report_server import ReportMCPServer, MCPToolExecutor
+# Importar componentes (ahora sin prefijo src. porque ya está en sys.path)
+from guardian import Guardian
+from analyst import Analyst
+from rag.retriever import RAGRetriever
+from skills.exporter import Vulnerability
+from mcp.report_server import ReportMCPServer, MCPToolExecutor
+
+# Para RedTeamingSessionManager, agregar parent directory
+sys.path.insert(0, str(Path(__file__).parent.parent))
 from integration_example import RedTeamingSessionManager
 
 
@@ -27,39 +35,62 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Estilos CSS personalizados
+# Estilos CSS personalizados - Paleta profesional
 st.markdown("""
 <style>
+    /* Colores base */
+    :root {
+        --primary: #1e3c72;
+        --secondary: #2a5298;
+        --success: #2e7d32;
+        --warning: #f57c00;
+        --danger: #c62828;
+        --dark: #0f0f23;
+        --light: #eceff1;
+    }
+    
+    /* Threat levels - Paleta profesional */
     .threat-high {
-        background-color: #ffcccc;
-        padding: 10px;
-        border-radius: 5px;
-        border-left: 4px solid #ff0000;
+        background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+        padding: 12px 15px;
+        border-radius: 8px;
+        border-left: 5px solid #c62828;
+        box-shadow: 0 2px 4px rgba(198, 40, 40, 0.1);
     }
+    
     .threat-medium {
-        background-color: #ffe6cc;
-        padding: 10px;
-        border-radius: 5px;
-        border-left: 4px solid #ff9900;
+        background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+        padding: 12px 15px;
+        border-radius: 8px;
+        border-left: 5px solid #f57c00;
+        box-shadow: 0 2px 4px rgba(245, 124, 0, 0.1);
     }
+    
     .threat-low {
-        background-color: #ffffcc;
-        padding: 10px;
-        border-radius: 5px;
-        border-left: 4px solid #ffff00;
+        background: linear-gradient(135deg, #fffde7 0%, #fff9c4 100%);
+        padding: 12px 15px;
+        border-radius: 8px;
+        border-left: 5px solid #f9a825;
+        box-shadow: 0 2px 4px rgba(249, 168, 37, 0.1);
     }
+    
     .safe {
-        background-color: #ccffcc;
-        padding: 10px;
-        border-radius: 5px;
-        border-left: 4px solid #00cc00;
+        background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+        padding: 12px 15px;
+        border-radius: 8px;
+        border-left: 5px solid #2e7d32;
+        box-shadow: 0 2px 4px rgba(46, 125, 50, 0.1);
     }
+    
     .metric-box {
-        background-color: #f0f2f6;
+        background-color: #f5f7fa;
         padding: 15px;
         border-radius: 10px;
         margin: 10px 0;
+        border: 1px solid #e0e0e0;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     }
+
 </style>
 """, unsafe_allow_html=True)
 

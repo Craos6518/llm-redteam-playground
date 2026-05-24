@@ -1,4 +1,4 @@
-# 🛡️ LLM Red Teaming Playground
+streamlit run src/main.py# 🛡️ LLM Red Teaming Playground
 
 **Sistema educativo interactivo para probar seguridad de Modelos de Lenguaje**
 
