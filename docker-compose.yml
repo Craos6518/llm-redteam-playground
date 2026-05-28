@@ -1,0 +1,18 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: llm-redteam-playground
+    ports:
+      - "8501:8501"
+    env_file:
+      - .env
+    volumes:
+      - chroma_db:/app/data/chroma_db
+      - reports:/app/reports
+    restart: unless-stopped
+
+volumes:
+  chroma_db:
+  reports:

@@ -29,8 +29,7 @@ from integration_example import RedTeamingSessionManager
 
 # Configuración de la página
 st.set_page_config(
-    page_title="🛡️ LLM Red Teaming Playground",
-    page_icon="🛡️",
+    page_title="LLM Red Teaming Playground",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -126,21 +125,21 @@ def init_session_state():
         try:
             st.session_state.guardian = Guardian()
         except Exception as e:
-            st.error(f"❌ Error inicializando Guardian: {e}")
+            st.error(f"Error inicializando Guardian: {e}")
             st.session_state.guardian = None
     
     if 'analyst' not in st.session_state:
         try:
             st.session_state.analyst = Analyst()
         except Exception as e:
-            st.error(f"❌ Error inicializando Analyst: {e}")
+            st.error(f"Error inicializando Analyst: {e}")
             st.session_state.analyst = None
     
     if 'rag_retriever' not in st.session_state:
         try:
             st.session_state.rag_retriever = RAGRetriever()
         except Exception as e:
-            st.warning(f"⚠️ RAG no disponible: {e}")
+            st.warning(f"RAG no disponible: {e}")
             st.session_state.rag_retriever = None
     
     if 'mcp_executor' not in st.session_state:
@@ -148,7 +147,7 @@ def init_session_state():
             mcp_server = ReportMCPServer()
             st.session_state.mcp_executor = MCPToolExecutor(mcp_server)
         except Exception as e:
-            st.error(f"❌ Error inicializando MCP: {e}")
+            st.error(f"Error inicializando MCP: {e}")
             st.session_state.mcp_executor = None
 
 
@@ -211,7 +210,7 @@ def process_user_input(user_input: str):
     st.session_state.session_manager.add_chat_message("user", user_input)
     
     # Placeholder para mostrar progreso
-    with st.spinner("🔍 Evaluando seguridad y analizando..."):
+    with st.spinner("Evaluando seguridad y analizando..."):
         
         # 1. Guardian: Evaluar amenaza
         guardian_analysis = None
@@ -261,7 +260,7 @@ def process_user_input(user_input: str):
                     st.session_state.session_manager.vulnerabilities_found.append(vuln)
             
             except Exception as e:
-                st.error(f"❌ Error en Guardian: {e}")
+                st.error(f"Error en Guardian: {e}")
         
         # 2. RAG: Buscar contexto relevante
         rag_context = ""
@@ -271,7 +270,7 @@ def process_user_input(user_input: str):
                 if rag_results:
                     rag_context = rag_results[0][0]  # Mejor resultado
             except Exception as e:
-                st.warning(f"⚠️ Error en RAG: {e}")
+                st.warning(f"Error en RAG: {e}")
         
         # 3. Analyst: Generar análisis detallado
         analyst_response = None
@@ -312,11 +311,11 @@ def render_sidebar():
     """Renderizar panel lateral con estadísticas y controles"""
     with st.sidebar:
         # Logo y título
-        st.markdown("## 🛡️ Red Teaming Playground")
+        st.markdown("## Red Teaming Playground")
         st.markdown("---")
         
         # Estadísticas generales
-        st.markdown("### 📊 Estadísticas de Sesión")
+        st.markdown("### Estadísticas de Sesión")
         col1, col2 = st.columns(2)
         
         with col1:
@@ -328,7 +327,7 @@ def render_sidebar():
         
         # Distribución de severidades
         if st.session_state.vulnerabilities:
-            st.markdown("### 🎯 Severidades Detectadas")
+            st.markdown("### Severidades Detectadas")
             severity_counts = {
                 "critical": 0,
                 "high": 0,
@@ -340,20 +339,18 @@ def render_sidebar():
             
             for severity, count in severity_counts.items():
                 if count > 0:
-                    emoji = {"critical": "🔴", "high": "🟠", "medium": "🟡", "low": "🟢"}.get(severity, "⚪")
                     st.progress(
                         count / max(len(st.session_state.vulnerabilities), 1),
-                        text=f"{emoji} {severity.upper()}: {count}"
+                        text=f"{severity.upper()}: {count}"
                     )
         
         # Últimas detecciones
         if st.session_state.threat_detections:
-            st.markdown("### 🚨 Últimas Detecciones")
+            st.markdown("### Últimas Detecciones")
             for detection in st.session_state.threat_detections[-3:]:
-                emoji = {"high": "🔴", "medium": "🟠", "low": "🟡"}.get(detection["threat_level"], "⚪")
                 with st.container():
                     st.markdown(f"""
-**{emoji} {detection['category'].upper()}**
+**{detection['category'].upper()}**
 - Intento #{detection['attempt']}
 - Nivel: {detection['threat_level']}
                     """)
@@ -361,17 +358,17 @@ def render_sidebar():
         st.markdown("---")
         
         # Información de sesión
-        st.markdown("### ℹ️ Información de Sesión")
+        st.markdown("### Información de Sesión")
         st.code(st.session_state.session_id, language="text")
         
         st.markdown("---")
         
         # Botón de descarga de reporte
         if st.session_state.attempt_count > 0:
-            st.markdown("### 📥 Exportar Reporte")
+            st.markdown("### Exportar Reporte")
             
-            if st.button("📄 Descargar Reporte en Markdown", key="export_btn", use_container_width=True):
-                with st.spinner("🔄 Generando reporte..."):
+            if st.button("Descargar Reporte en Markdown", key="export_btn", use_container_width=True):
+                with st.spinner("Generando reporte..."):
                     try:
                         # Usar MCP para generar reporte
                         if st.session_state.mcp_executor:
@@ -404,24 +401,24 @@ def render_sidebar():
                                     report_content = f.read()
                                 
                                 st.download_button(
-                                    label="⬇️ Descargar MD",
+                                    label="Descargar MD",
                                     data=report_content,
                                     file_name=report_path.name,
                                     mime="text/markdown",
                                     key="download_md"
                                 )
                                 
-                                st.success(f"✅ Reporte generado: {report_path.name}")
+                                st.success(f"Reporte generado: {report_path.name}")
                             else:
-                                st.error(f"❌ Error: {result.get('message')}")
+                                st.error(f"Error: {result.get('message')}")
                         else:
-                            st.error("❌ MCP no disponible")
+                            st.error("MCP no disponible")
                     
                     except Exception as e:
-                        st.error(f"❌ Error al generar reporte: {e}")
+                        st.error(f"Error al generar reporte: {e}")
         
         # Botón de limpieza
-        if st.button("🗑️ Limpiar Sesión", key="clear_btn", use_container_width=True):
+        if st.button("Limpiar Sesión", key="clear_btn", use_container_width=True):
             for key in list(st.session_state.keys()):
                 if key not in ['guardian', 'analyst', 'rag_retriever', 'mcp_executor']:
                     del st.session_state[key]
@@ -431,7 +428,7 @@ def render_sidebar():
 def render_main_panel():
     """Renderizar panel principal con chat"""
     # Título
-    st.markdown("# 🛡️ LLM Red Teaming Playground")
+    st.markdown("# LLM Red Teaming Playground")
     st.markdown("""
     **Sistema interactivo para pruebas de seguridad en LLMs**
     
@@ -442,7 +439,7 @@ def render_main_panel():
     st.markdown("---")
     
     # Historial de chat
-    st.markdown("### 💬 Historial de Conversación")
+    st.markdown("### Historial de Conversación")
     
     chat_container = st.container()
     
@@ -453,7 +450,7 @@ def render_main_panel():
             threat_level = msg.get("threat_level", None)
             
             if role == "user":
-                with st.chat_message("user", avatar="👤"):
+                with st.chat_message("user"):
                     st.markdown(content)
             
             elif role == "analyst":
@@ -461,21 +458,17 @@ def render_main_panel():
                 if threat_level:
                     if threat_level == "high":
                         css_class = "threat-high"
-                        emoji = "🔴"
                     elif threat_level == "medium":
                         css_class = "threat-medium"
-                        emoji = "🟠"
                     else:
                         css_class = "threat-low"
-                        emoji = "🟡"
                 else:
                     css_class = "safe"
-                    emoji = "🟢"
                 
-                with st.chat_message("assistant", avatar="🔬"):
+                with st.chat_message("assistant"):
                     st.markdown(
                         f'<div class="{css_class}">'
-                        f'<strong>{emoji} Análisis del Analista</strong><br>'
+                        f'<strong>Análisis del Analista</strong><br>'
                         f'{content}'
                         f'</div>',
                         unsafe_allow_html=True
@@ -484,7 +477,7 @@ def render_main_panel():
     st.markdown("---")
     
     # Input al pie
-    st.markdown("### 📝 Enviar Prompt")
+    st.markdown("### Enviar Prompt")
     user_input = st.chat_input(
         placeholder="Escribe un prompt para probar la seguridad del LLM...",
         key="chat_input"
