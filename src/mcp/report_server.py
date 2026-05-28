@@ -11,7 +11,10 @@ import logging
 from dataclasses import asdict
 from datetime import datetime
 
-from src.skills.exporter import ReportExporter, Vulnerability, generate_report
+try:
+    from skills.exporter import ReportExporter, Vulnerability
+except ImportError:
+    from src.skills.exporter import ReportExporter, Vulnerability
 
 # Configurar logging
 logger = logging.getLogger(__name__)
