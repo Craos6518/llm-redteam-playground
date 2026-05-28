@@ -34,10 +34,103 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Estilos CSS personalizados - Paleta profesional
+# Estilos CSS personalizados - SOC dark mode
 st.markdown("""
 <style>
-    /* Colores base */
+    .stApp {
+        background: linear-gradient(180deg, #1e1e1e 0%, #171717 100%);
+        color: #e6e6e6;
+    }
+
+    .main .block-container {
+        padding-top: 1.5rem;
+        padding-bottom: 2rem;
+    }
+
+    section[data-testid="stSidebar"] {
+        background: #232323;
+        border-right: 1px solid #353535;
+    }
+
+    section[data-testid="stSidebar"] * {
+        color: #e6e6e6;
+    }
+
+    .soc-card {
+        background: #2d2d2d;
+        border: 1px solid #444;
+        border-radius: 12px;
+        padding: 1rem 1.1rem;
+        margin: 0.75rem 0;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+    }
+
+    .soc-card h4 {
+        margin: 0 0 0.65rem 0;
+        font-size: 0.9rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #f1f1f1;
+    }
+
+    .soc-card blockquote {
+        margin: 0;
+        padding-left: 1rem;
+        border-left: 3px solid #6b6b6b;
+        color: #d2d2d2;
+    }
+
+    .stMetric {
+        background: #2d2d2d;
+        border: 1px solid #444;
+        border-radius: 12px;
+        padding: 0.85rem 1rem;
+    }
+
+    .stMetric [data-testid="stMetricLabel"] {
+        color: #cfcfcf;
+        font-size: 0.82rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+    }
+
+    .stMetric [data-testid="stMetricValue"] {
+        color: #ffffff;
+        font-size: 1.7rem;
+        font-weight: 700;
+        line-height: 1.1;
+    }
+
+    .stMetric [data-testid="stMetricDelta"] {
+        color: #a8a8a8;
+    }
+
+    .stButton > button {
+        width: 100%;
+        background: #2d2d2d;
+        color: #f2f2f2;
+        border: 1px solid #6d2a2a;
+        border-radius: 10px;
+        padding: 0.65rem 1rem;
+        transition: all 0.2s ease;
+    }
+
+    .stButton > button:hover {
+        background: #382020;
+        border-color: #c23b3b;
+        color: #ffffff;
+    }
+
+    .stChatInput > div {
+        background: #2d2d2d;
+        border-top: 1px solid #444;
+    }
+
+    .stCode {
+        border: 1px solid #444;
+        border-radius: 12px;
+    }
+
     :root {
         --primary: #1e3c72;
         --secondary: #2a5298;
@@ -46,48 +139,6 @@ st.markdown("""
         --danger: #c62828;
         --dark: #0f0f23;
         --light: #eceff1;
-    }
-    
-    /* Threat levels - Paleta profesional */
-    .threat-high {
-        background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
-        padding: 12px 15px;
-        border-radius: 8px;
-        border-left: 5px solid #c62828;
-        box-shadow: 0 2px 4px rgba(198, 40, 40, 0.1);
-    }
-    
-    .threat-medium {
-        background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
-        padding: 12px 15px;
-        border-radius: 8px;
-        border-left: 5px solid #f57c00;
-        box-shadow: 0 2px 4px rgba(245, 124, 0, 0.1);
-    }
-    
-    .threat-low {
-        background: linear-gradient(135deg, #fffde7 0%, #fff9c4 100%);
-        padding: 12px 15px;
-        border-radius: 8px;
-        border-left: 5px solid #f9a825;
-        box-shadow: 0 2px 4px rgba(249, 168, 37, 0.1);
-    }
-    
-    .safe {
-        background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
-        padding: 12px 15px;
-        border-radius: 8px;
-        border-left: 5px solid #2e7d32;
-        box-shadow: 0 2px 4px rgba(46, 125, 50, 0.1);
-    }
-    
-    .metric-box {
-        background-color: #f5f7fa;
-        padding: 15px;
-        border-radius: 10px;
-        margin: 10px 0;
-        border: 1px solid #e0e0e0;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     }
 
 </style>
@@ -149,6 +200,37 @@ def init_session_state():
         except Exception as e:
             st.error(f"Error inicializando MCP: {e}")
             st.session_state.mcp_executor = None
+
+
+def severity_to_score(severity: Optional[str]) -> float:
+    """Convertir severidad textual a una escala numérica para métricas UI."""
+    mapping = {
+        "critical": 4.0,
+        "high": 3.0,
+        "medium": 2.0,
+        "low": 1.0,
+    }
+    return mapping.get((severity or "low").lower(), 1.0)
+
+
+def average_severity_label() -> str:
+    """Calcular una etiqueta legible para la severidad promedio."""
+    if not st.session_state.vulnerabilities:
+        return "N/A"
+
+    scores = [severity_to_score(vuln.severity) for vuln in st.session_state.vulnerabilities]
+    average_score = sum(scores) / len(scores)
+
+    if average_score >= 3.5:
+        label = "CRITICAL"
+    elif average_score >= 2.5:
+        label = "HIGH"
+    elif average_score >= 1.5:
+        label = "MEDIUM"
+    else:
+        label = "LOW"
+
+    return f"{label} ({average_score:.1f}/4)"
 
 
 def extract_threat_info(analysis_text: str) -> Dict:
@@ -310,24 +392,24 @@ def process_user_input(user_input: str):
 def render_sidebar():
     """Renderizar panel lateral con estadísticas y controles"""
     with st.sidebar:
-        # Logo y título
-        st.markdown("## Red Teaming Playground")
+        st.markdown("## LLM Red Teaming Playground")
         st.markdown("---")
         
-        # Estadísticas generales
-        st.markdown("### Estadísticas de Sesión")
-        col1, col2 = st.columns(2)
+        st.markdown("### ESTADÍSTICAS DE SESIÓN")
+        metric_col1, metric_col2, metric_col3 = st.columns(3)
         
-        with col1:
+        with metric_col1:
             st.metric("Intentos", st.session_state.attempt_count)
         
-        with col2:
+        with metric_col2:
             threat_count = len(st.session_state.threat_detections)
-            st.metric("Amenazas", threat_count)
+            st.metric("Amenazas Detectadas", threat_count)
+
+        with metric_col3:
+            st.metric("Severidad Promedio", average_severity_label())
         
-        # Distribución de severidades
         if st.session_state.vulnerabilities:
-            st.markdown("### Severidades Detectadas")
+            st.markdown("### DISTRIBUCIÓN DE SEVERIDAD")
             severity_counts = {
                 "critical": 0,
                 "high": 0,
@@ -344,9 +426,8 @@ def render_sidebar():
                         text=f"{severity.upper()}: {count}"
                     )
         
-        # Últimas detecciones
         if st.session_state.threat_detections:
-            st.markdown("### Últimas Detecciones")
+            st.markdown("### ÚLTIMAS DETECCIONES")
             for detection in st.session_state.threat_detections[-3:]:
                 with st.container():
                     st.markdown(f"""
@@ -357,15 +438,13 @@ def render_sidebar():
         
         st.markdown("---")
         
-        # Información de sesión
-        st.markdown("### Información de Sesión")
-        st.code(st.session_state.session_id, language="text")
+        st.markdown("### INFORMACIÓN DE SESIÓN")
+        st.code(st.session_state.session_id, language=None)
         
         st.markdown("---")
         
-        # Botón de descarga de reporte
         if st.session_state.attempt_count > 0:
-            st.markdown("### Exportar Reporte")
+            st.markdown("### EXPORTAR REPORTE")
             
             if st.button("Descargar Reporte en Markdown", key="export_btn", use_container_width=True):
                 with st.spinner("Generando reporte..."):
@@ -417,8 +496,7 @@ def render_sidebar():
                     except Exception as e:
                         st.error(f"Error al generar reporte: {e}")
         
-        # Botón de limpieza
-        if st.button("Limpiar Sesión", key="clear_btn", use_container_width=True):
+        if st.button("LIMPIAR SESIÓN", key="clear_btn", use_container_width=True):
             for key in list(st.session_state.keys()):
                 if key not in ['guardian', 'analyst', 'rag_retriever', 'mcp_executor']:
                     del st.session_state[key]
@@ -427,7 +505,6 @@ def render_sidebar():
 
 def render_main_panel():
     """Renderizar panel principal con chat"""
-    # Título
     st.markdown("# LLM Red Teaming Playground")
     st.markdown("""
     **Sistema interactivo para pruebas de seguridad en LLMs**
@@ -438,46 +515,63 @@ def render_main_panel():
     
     st.markdown("---")
     
-    # Historial de chat
-    st.markdown("### Historial de Conversación")
+    st.markdown("### HISTORIAL DE CONVERSACIÓN")
     
     chat_container = st.container()
     
     with chat_container:
-        for msg in st.session_state.chat_history:
-            role = msg.get("role", "unknown")
-            content = msg.get("content", "")
-            threat_level = msg.get("threat_level", None)
-            
+        chat_entries = st.session_state.chat_history
+        entry_index = 0
+
+        while entry_index < len(chat_entries):
+            message = chat_entries[entry_index]
+            role = message.get("role", "unknown")
+            content = message.get("content", "")
+
             if role == "user":
-                with st.chat_message("user"):
-                    st.markdown(content)
-            
-            elif role == "analyst":
-                # Determinar color según nivel de amenaza
-                if threat_level:
-                    if threat_level == "high":
-                        css_class = "threat-high"
-                    elif threat_level == "medium":
-                        css_class = "threat-medium"
+                next_message = chat_entries[entry_index + 1] if entry_index + 1 < len(chat_entries) else {}
+                analyst_content = next_message.get("content", "") if next_message.get("role") == "analyst" else ""
+                threat_level = next_message.get("threat_level", "low") if analyst_content else "low"
+
+                with st.container():
+                    st.markdown('<div class="soc-card">', unsafe_allow_html=True)
+                    st.markdown("[ATACANTE]")
+                    quoted_prompt = "> " + content.replace("\n", "\n> ")
+                    st.markdown(quoted_prompt)
+                    st.markdown('</div>', unsafe_allow_html=True)
+
+                with st.container():
+                    st.markdown('<div class="soc-card">', unsafe_allow_html=True)
+                    st.markdown("[EVALUACIÓN SISTEMA]")
+
+                    if threat_level in ["high", "medium"]:
+                        st.error(
+                            f"GUARDIÁN: Bloqueo aplicado. Nivel de amenaza detectado: {threat_level.upper()}"
+                        )
                     else:
-                        css_class = "threat-low"
-                else:
-                    css_class = "safe"
-                
-                with st.chat_message("assistant"):
-                    st.markdown(
-                        f'<div class="{css_class}">'
-                        f'<strong>Análisis del Analista</strong><br>'
-                        f'{content}'
-                        f'</div>',
-                        unsafe_allow_html=True
-                    )
+                        st.success("GUARDIÁN: Sin bloqueo. No se detectó una amenaza relevante.")
+
+                    if analyst_content:
+                        with st.expander("ANALISTA: Detalle técnico", expanded=False):
+                            st.info(analyst_content)
+                    st.markdown('</div>', unsafe_allow_html=True)
+
+                entry_index += 2 if analyst_content else 1
+                continue
+
+            if role == "analyst":
+                with st.container():
+                    st.markdown('<div class="soc-card">', unsafe_allow_html=True)
+                    st.markdown("[EVALUACIÓN SISTEMA]")
+                    with st.expander("ANALISTA: Detalle técnico", expanded=False):
+                        st.info(content)
+                    st.markdown('</div>', unsafe_allow_html=True)
+
+            entry_index += 1
     
     st.markdown("---")
     
-    # Input al pie
-    st.markdown("### Enviar Prompt")
+    st.markdown("### ENVIAR PROMPT")
     user_input = st.chat_input(
         placeholder="Escribe un prompt para probar la seguridad del LLM...",
         key="chat_input"
