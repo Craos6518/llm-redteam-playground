@@ -1,97 +1,63 @@
 #!/usr/bin/env python3
 """
 Analyst Module - Análisis profundo y generación de respuestas complejas
-Responsable de generar respuestas detalladas y realizar análisis exhaustivos
+Responsable de generar respuestas detalladas y realizar análisis exhaustivos.
+
+Usa el adaptador `src.llm_client` (Gemini → Groq → OpenRouter → OmniRoute →
+Ollama) para no depender de una sola cuota gratuita.
 """
 
 import os
-from dotenv import load_dotenv
-from google import genai
+import sys
+from pathlib import Path
 
-# Cargar variables de entorno
+PROJECT_ROOT = Path(__file__).parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from dotenv import load_dotenv
+
+from src.llm_client import LLMClient, LLMProviderError, extract_final_answer
+
 load_dotenv()
 
+DEPTH_INSTRUCTIONS = {
+    "brief": "Responde de forma concisa en 2-3 oraciones.",
+    "standard": "Proporciona una respuesta equilibrada de 1-2 párrafos.",
+    "deep": "Realiza un análisis profundo con ejemplos y explicaciones detalladas.",
+}
+
+
 class Analyst:
-    """
-    Componente Analyst para análisis profundo y respuestas complejas
-    """
-    
-    def __init__(self):
-        """Inicializar el Analyst con la API de Gemini"""
-        api_key = os.getenv('GEMINI_API_KEY')
-        model_name = os.getenv('ANALYST_MODEL', 'gemini-2.5-flash')
-        
-        if not api_key:
-            raise ValueError("GEMINI_API_KEY no está configurada en .env")
-        
-        self.client = genai.Client(api_key=api_key)
-        self.model = model_name
-        
+    """Componente Analyst para análisis profundo y respuestas complejas."""
+
+    def __init__(self, client: LLMClient = None):
+        """Inicializa el Analyst sobre el adaptador de LLM."""
+        self.client = client or LLMClient()
+        self.model = self.client.model or "gemini-2.5-flash"
+
+    # ------------------------------------------------------------------
     def analyze_prompt(self, prompt: str, context: str = "") -> str:
-        """
-        Analizar un prompt y proporcionar análisis detallado
-        
-        Args:
-            prompt: Texto a analizar
-            context: Contexto adicional (opcional)
-            
-        Returns:
-            Análisis detallado
-        """
+        """Analiza un prompt y proporciona análisis detallado."""
         full_prompt = f"Proporciona un análisis detallado de: {prompt}"
         if context:
             full_prompt += f"\n\nContexto: {context}"
-        
-        try:
-            response = self.client.models.generate_content(
-                model=self.model,
-                contents=full_prompt
-            )
-            return response.text
-        except Exception as e:
-            return f"Error en análisis: {str(e)}"
-    
-    def generate_detailed_response(self, question: str, depth: str = "standard") -> str:
-        """
-        Generar una respuesta detallada a una pregunta
-        
-        Args:
-            question: Pregunta a responder
-            depth: "brief", "standard", o "deep"
-            
-        Returns:
-            Respuesta detallada
-        """
-        depth_instructions = {
-            "brief": "Responde de forma concisa en 2-3 oraciones.",
-            "standard": "Proporciona una respuesta equilibrada de 1-2 párrafos.",
-            "deep": "Realiza un análisis profundo con ejemplos y explicaciones detalladas."
-        }
-        
-        instruction = depth_instructions.get(depth, depth_instructions["standard"])
-        full_prompt = f"{instruction}\n\nPregunta: {question}"
-        
-        try:
-            response = self.client.models.generate_content(
-                model=self.model,
-                contents=full_prompt
-            )
-            return response.text
-        except Exception as e:
-            return f"Error generando respuesta: {str(e)}"
-    
+        return self._complete(full_prompt, "Analista de seguridad de LLMs.")
+
+    # ------------------------------------------------------------------
+    def generate_detailed_response(self, question: str, depth: str = "standard", context: str = "") -> str:
+        """Genera una respuesta detallada a una pregunta."""
+        instruction = DEPTH_INSTRUCTIONS.get(depth, DEPTH_INSTRUCTIONS["standard"])
+        prompt = f"{instruction}\n\nPregunta: {question}"
+        if context:
+            prompt += f"\n\nContexto recuperado (RAG):\n{context}"
+        return self._complete(prompt,
+                              "Analista de seguridad de LLMs.")
+
+    # ------------------------------------------------------------------
     def identify_attack_vectors(self, scenario: str) -> str:
-        """
-        Identificar vectores de ataque potenciales en un escenario
-        (Para propósitos educativos y de red teaming defensivo)
-        
-        Args:
-            scenario: Descripción del escenario a analizar
-            
-        Returns:
-            Análisis de vectores de ataque potenciales
-        """
-        prompt = f"""Con fines educativos de red teaming defensivo, identifica los posibles 
+        """Identifica vectores de ataque potenciales (uso educativo y defensivo)."""
+        prompt = f"""A fines educativos de red teaming defensivo, identifica los posibles
 vectores de ataque en este escenario. Proporciona sugerencias de defensa para cada uno.
 
 Escenario: {scenario}
@@ -102,54 +68,41 @@ Formato:
    - Riesgo: [nivel]
    - Defensa: [estrategia]
 """
-        
+        return self._complete(prompt, "Analista de seguridad de LLMs, con enfoque defensivo.")
+
+    # ------------------------------------------------------------------
+    def _complete(self, prompt: str, system_prompt: str) -> str:
+        """Ejecuta la generación devolviendo un mensaje de error legible si falla."""
         try:
-            response = self.client.models.generate_content(
-                model=self.model,
-                contents=prompt
-            )
-            return response.text
-        except Exception as e:
-            return f"Error en análisis: {str(e)}"
+            return self.client.generate(prompt, system_prompt=system_prompt)
+        except LLMProviderError as exc:
+            return f"Error en análisis: {exc}"
 
 
 def main():
-    """Demostración del Analyst"""
+    """Demostración del Analyst."""
     print("🔬 Inicializando Analyst...\n")
-    
+
     try:
         analyst = Analyst()
-        print(f"✓ Analyst activo con modelo: {analyst.model}\n")
-        
-        # Ejemplo 1: Respuesta breve
+        print(f"✓ Analyst activo: {analyst}\n")
+
+        for depth in ("brief", "deep"):
+            print("=" * 60)
+            print(f"PRUEBA: Respuesta {depth}")
+            print("=" * 60)
+            print(analyst.generate_detailed_response(
+                "¿Qué es el Machine Learning?", depth=depth))
+            print()
+
         print("=" * 60)
-        print("PRUEBA 1: Respuesta Breve")
+        print("PRUEBA: Vectores de ataque (educativo)")
         print("=" * 60)
-        question = "¿Qué es el Machine Learning?"
-        result = analyst.generate_detailed_response(question, depth="brief")
-        print(f"\nPregunta: {question}")
-        print(f"\nRespuesta:\n{result}\n")
-        
-        # Ejemplo 2: Respuesta detallada
-        print("=" * 60)
-        print("PRUEBA 2: Respuesta Profunda")
-        print("=" * 60)
-        question = "¿Cuáles son los desafíos principales del IA?"
-        result = analyst.generate_detailed_response(question, depth="deep")
-        print(f"\nPregunta: {question}")
-        print(f"\nRespuesta:\n{result}\n")
-        
-        # Ejemplo 3: Análisis de vectores de ataque
-        print("=" * 60)
-        print("PRUEBA 3: Análisis de Vectores de Ataque (Educativo)")
-        print("=" * 60)
-        scenario = "Un chatbot público que interactúa sin filtros"
-        result = analyst.identify_attack_vectors(scenario)
-        print(f"\nEscenario: {scenario}")
-        print(f"\nAnálisis:\n{result}\n")
-        
-    except Exception as e:
-        print(f"❌ Error: {e}")
+        print(analyst.identify_attack_vectors(
+            "Un chatbot público que interactúa sin filtros"))
+
+    except Exception as exc:  # pragma: no cover
+        print(f"❌ Error: {exc}")
 
 
 if __name__ == "__main__":

@@ -33,7 +33,7 @@ El proyecto **LLM Red Teaming Playground** es un sistema educativo interactivo q
 | **Interfaz Streamlit** | 20 | ✅ COMPLETO | Código listo (pendiente browser test) |
 | **Integración Completa** | - | ✅ COMPLETO | End-to-end validado |
 
-**SUBTOTAL: 40/100 puntos** ✅
+**SUBTOTAL: 50/100 puntos** ✅
 
 ---
 
@@ -47,7 +47,7 @@ El proyecto **LLM Red Teaming Playground** es un sistema educativo interactivo q
 
 **SUBTOTAL: 30/100 puntos** ✅
 
-**TOTAL: 70/100 puntos completados**
+**TOTAL: 80/100 puntos completados**
 
 ---
 
@@ -104,7 +104,7 @@ reports/
 ### Corpus de Conocimiento
 
 ```
-data/corpus/ (17 documentos, 248 chunks)
+data/corpus/ (17 documentos, 1276 chunks)
 ├── owasp_llm01_prompt_injection.md
 ├── owasp_llm02_sensitive_disclosure.md
 ├── owasp_llm03_supply_chain.md
@@ -222,11 +222,21 @@ Salida: Análisis markdown 200-1000 palabras
 ```
 Entrada: query string
   ↓
-Embedding: SentenceTransformer (384-dim)
+Embedding: Modelo por defecto Chroma (all-MiniLM-L6-v2, 384-dim, cosine)
   ↓
 Búsqueda: ChromaDB cosine similarity
   ↓
-Re-ranking: Por score
+Pre-Retrieval: Query Expansion (Multi-Query)
+  ↓
+  • Query Expansion (LLM genera 3 variantes) + Búsqueda Vectorial
+  ↓
+  • Fusión y deduplicación de chunks
+  ↓
+  Post-Retrieval: Re-Ranking con Cross-Encoder
+  ↓
+  • Re-evaluar y reordenar chunks con modelo Cross-Encoder
+  ↓
+  • top_k=4 chunks de mayor puntuación antes de prompt
   ↓
 Salida: Top 3 documentos más relevantes
 ```
@@ -463,8 +473,8 @@ streamlit run src/main.py
 - ✅ Integración end-to-end
 
 ### Validación
-- ✅ 4/4 tests pasando
-- ✅ 4 reportes generados
+- ✅ 8/8 PASSING
+- ✅ 8 reportes generados
 - ✅ Seguridad validada
 - ✅ OWASP compliance 10/10
 

@@ -3,7 +3,6 @@
 LLM Red Teaming Playground - Interfaz Principal con Streamlit
 Integra Guardian, Analyst, RAG y el servidor MCP para exportación de reportes
 """
-
 import sys
 from pathlib import Path
 
@@ -19,13 +18,14 @@ import json
 from guardian import Guardian
 from analyst import Analyst
 from rag.retriever import RAGRetriever
+from rag.naive_rag import NaiveRAG
+from rag.advanced_rag import AdvancedRAG
 from skills.exporter import Vulnerability
 from mcp.report_server import ReportMCPServer, MCPToolExecutor
 
 # Para RedTeamingSessionManager, agregar parent directory
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from integration_example import RedTeamingSessionManager
-
 
 # Configuración de la página
 st.set_page_config(
@@ -165,6 +165,14 @@ def init_session_state():
     
     if 'threat_detections' not in st.session_state:
         st.session_state.threat_detections = []
+
+    if 'guardian_error' not in st.session_state:
+        st.session_state.guardian_error = ""
+
+    if 'last_provider' not in st.session_state:
+        st.session_state.last_provider = None
+    if 'last_model' not in st.session_state:
+        st.session_state.last_model = None
     
     if 'session_manager' not in st.session_state:
         st.session_state.session_manager = RedTeamingSessionManager(
@@ -190,8 +198,25 @@ def init_session_state():
         try:
             st.session_state.rag_retriever = RAGRetriever()
         except Exception as e:
-            st.warning(f"RAG no disponible: {e}")
+            st.warning(f"RAG Retriever no disponible: {e}")
             st.session_state.rag_retriever = None
+    
+    if 'naive_rag' not in st.session_state:
+        try:
+            st.session_state.naive_rag = NaiveRAG()
+        except Exception as e:
+            st.warning(f"Naive RAG no disponible: {e}")
+            st.session_state.naive_rag = None
+    
+    if 'advanced_rag' not in st.session_state:
+        try:
+            st.session_state.advanced_rag = AdvancedRAG()
+        except Exception as e:
+            st.warning(f"Advanced RAG no disponible: {e}")
+            st.session_state.advanced_rag = None
+    
+    if 'rag_architecture' not in st.session_state:
+        st.session_state.rag_architecture = "retriever"  # retriever | naive | advanced
     
     if 'mcp_executor' not in st.session_state:
         try:
@@ -299,60 +324,102 @@ def process_user_input(user_input: str):
         threat_detected = False
         threat_info = {}
         
+        guardian_failed = False
         if st.session_state.guardian:
             try:
                 guardian_result = st.session_state.guardian.evaluate_threat(user_input)
-                guardian_analysis = guardian_result.get("analysis", "")
-                threat_info = extract_threat_info(guardian_analysis)
-                threat_level = threat_info.get("threat_level", "low")
-                threat_detected = threat_level in ["medium", "high"]
-                
-                if threat_detected:
-                    st.session_state.threat_detections.append({
-                        "attempt": st.session_state.attempt_count,
-                        "input": user_input[:100],
-                        "threat_level": threat_level,
-                        "category": threat_info.get("risk_category", "unknown"),
-                        "timestamp": datetime.now().isoformat()
-                    })
-                    
-                    # Registrar como vulnerabilidad
-                    category_map = {
-                        "prompt_injection": "LLM01",
-                        "jailbreak": "LLM01",
-                        "data_poisoning": "LLM04",
-                        "leakage": "LLM06",
-                        "excessive_agency": "LLM08",
-                    }
-                    
-                    owasp_cat = category_map.get(
-                        threat_info.get("risk_category", "unknown"),
-                        "LLM01"
+
+                if guardian_result.get("status") == "error":
+                    # Fallo real de infraestructura (cuota, clave o red).
+                    # Se informa en lugar de mostrar un "todo seguro" falso.
+                    guardian_failed = True
+                    st.session_state.guardian_error = guardian_result.get("error", "")
+                    st.error(
+                        "\u26a0\ufe0f Guardian no pudo evaluar el prompt: "
+                        f"{guardian_result.get('error', 'error desconocido')}"
                     )
-                    
-                    vuln = Vulnerability(
-                        category=owasp_cat,
-                        severity=threat_level,
-                        title=f"{threat_info.get('risk_category', 'Unknown')} Attempt",
-                        description=threat_info.get("explanation", user_input),
-                        source="guardian_detection",
-                        found_at=f"attempt_{st.session_state.attempt_count}"
-                    )
-                    st.session_state.vulnerabilities.append(vuln)
-                    st.session_state.session_manager.vulnerabilities_found.append(vuln)
-            
+                else:
+                    st.session_state.guardian_error = ""
+                    guardian_analysis = guardian_result.get("analysis", "")
+                    threat_info = extract_threat_info(guardian_analysis)
+                    threat_level = threat_info.get("threat_level", "low")
+                    threat_detected = threat_level in ["medium", "high"]
+                    st.session_state.last_provider = guardian_result.get("provider")
+                    st.session_state.last_model = guardian_result.get("model")
+
+                    if threat_detected:
+                        st.session_state.threat_detections.append({
+                            "attempt": st.session_state.attempt_count,
+                            "input": user_input[:100],
+                            "threat_level": threat_level,
+                            "category": threat_info.get("risk_category", "unknown"),
+                            "timestamp": datetime.now().isoformat()
+                        })
+
+                        # Registrar como vulnerabilidad
+                        category_map = {
+                            "prompt_injection": "LLM01",
+                            "jailbreak": "LLM01",
+                            "data_poisoning": "LLM04",
+                            "leakage": "LLM06",
+                            "excessive_agency": "LLM08",
+                        }
+
+                        owasp_cat = category_map.get(
+                            threat_info.get("risk_category", "unknown"), "LLM01"
+                        )
+
+                        vuln = Vulnerability(
+                            category=owasp_cat,
+                            severity=threat_level,
+                            title=f"{threat_info.get('risk_category', 'Unknown')} Attempt",
+                            description=threat_info.get("explanation", user_input),
+                            source="guardian_detection",
+                            found_at=f"attempt_{st.session_state.attempt_count}"
+                        )
+                        st.session_state.vulnerabilities.append(vuln)
+                        st.session_state.session_manager.vulnerabilities_found.append(vuln)
+
             except Exception as e:
+                guardian_failed = True
                 st.error(f"Error en Guardian: {e}")
         
-        # 2. RAG: Buscar contexto relevante
+        # 2. RAG: Buscar contexto relevante (retriever | naive | advanced)
         rag_context = ""
-        if st.session_state.rag_retriever:
-            try:
-                rag_results = st.session_state.rag_retriever.search(user_input, top_k=3)
-                if rag_results:
-                    rag_context = rag_results[0][0]  # Mejor resultado
-            except Exception as e:
-                st.warning(f"Error en RAG: {e}")
+        rag_used = "ninguno"
+        rag_arch = st.session_state.get("rag_architecture", "retriever")
+        
+        if rag_arch == "retriever":
+            if st.session_state.rag_retriever:
+                try:
+                    rag_results = st.session_state.rag_retriever.retrieve(user_input, top_k=3)
+                    if rag_results:
+                        rag_context = rag_results[0].get("content", "")  # Mejor resultado
+                    rag_used = "RAGRetriever (lexical)"
+                except Exception as e:
+                    st.warning(f"Error en RAGRetriever: {e}")
+        
+        elif rag_arch == "naive":
+            if st.session_state.naive_rag:
+                try:
+                    naive_result = st.session_state.naive_rag.generate(user_input)
+                    chunks = naive_result.get("retrieved_chunks", [])
+                    if chunks:
+                        rag_context = "\n\n".join(c.get("content", "") for c in chunks)
+                    rag_used = f"NaiveRAG (top-{naive_result.get('num_chunks', 0)} chunks)"
+                except Exception as e:
+                    st.warning(f"Error en NaiveRAG: {e}")
+        
+        elif rag_arch == "advanced":
+            if st.session_state.advanced_rag:
+                try:
+                    advanced_result = st.session_state.advanced_rag.generate(user_input)
+                    chunks = advanced_result.get("retrieved_chunks", [])
+                    if chunks:
+                        rag_context = "\n\n".join(c.get("content", "") for c in chunks)
+                    rag_used = f"AdvancedRAG (top-{advanced_result.get('num_chunks', 0)} chunks, {len(advanced_result.get('expanded_queries', []))} queries)"
+                except Exception as e:
+                    st.warning(f"Error en AdvancedRAG: {e}")
         
         # 3. Analyst: Generar análisis detallado
         analyst_response = None
@@ -361,7 +428,8 @@ def process_user_input(user_input: str):
                 depth = "deep" if threat_detected else "standard"
                 analyst_response = st.session_state.analyst.generate_detailed_response(
                     user_input,
-                    depth=depth
+                    depth=depth,
+                    context=rag_context,
                 )
             except Exception as e:
                 analyst_response = f"Error en análisis: {e}"
@@ -373,7 +441,10 @@ def process_user_input(user_input: str):
             st.session_state.chat_history.append({
                 "role": "analyst",
                 "content": analyst_response,
-                "threat_level": threat_info.get("threat_level", "low"),
+                "threat_level": "low" if guardian_failed else threat_info.get("threat_level", "low"),
+                "guardian_error": st.session_state.guardian_error if guardian_failed else "",
+                "rag_used": rag_used,
+                "rag_architecture": rag_arch,
                 "timestamp": datetime.now().isoformat()
             })
             st.session_state.session_manager.add_chat_message("assistant", analyst_response)
@@ -385,6 +456,8 @@ def process_user_input(user_input: str):
                 "input": user_input,
                 "response": analyst_response,
                 "threat_level": threat_info.get("threat_level", "low"),
+                "rag_used": rag_used,
+                "rag_architecture": rag_arch,
                 "timestamp": datetime.now().isoformat()
             })
 
@@ -425,7 +498,6 @@ def render_sidebar():
                         count / max(len(st.session_state.vulnerabilities), 1),
                         text=f"{severity.upper()}: {count}"
                     )
-        
         if st.session_state.threat_detections:
             st.markdown("### ÚLTIMAS DETECCIONES")
             for detection in st.session_state.threat_detections[-3:]:
@@ -435,6 +507,22 @@ def render_sidebar():
 - Intento #{detection['attempt']}
 - Nivel: {detection['threat_level']}
                     """)
+        st.markdown("---")
+        
+        st.markdown("### ARQUITECTURA RAG")
+        rag_options = {
+            "retriever": "RAGRetriever (lexical, actual)",
+            "naive": "Naive RAG (baseline vectorial)",
+            "advanced": "Advanced RAG (query expansion + re-ranking)"
+        }
+        rag_arch = st.selectbox(
+            "Selector de RAG",
+            options=list(rag_options.keys()),
+            format_func=lambda k: rag_options[k],
+            key="rag_architecture",
+            help="Elegí qué arquitectura RAG usar al procesar cada prompt."
+        )
+        st.caption(f"Actual: {rag_options[rag_arch]}")
         
         st.markdown("---")
         
@@ -492,13 +580,12 @@ def render_sidebar():
                                 st.error(f"Error: {result.get('message')}")
                         else:
                             st.error("MCP no disponible")
-                    
                     except Exception as e:
                         st.error(f"Error al generar reporte: {e}")
         
         if st.button("LIMPIAR SESIÓN", key="clear_btn", use_container_width=True):
             for key in list(st.session_state.keys()):
-                if key not in ['guardian', 'analyst', 'rag_retriever', 'mcp_executor']:
+                if key not in ['guardian', 'analyst', 'rag_retriever', 'naive_rag', 'advanced_rag', 'mcp_executor']:
                     del st.session_state[key]
             st.rerun()
 
@@ -532,6 +619,7 @@ def render_main_panel():
                 next_message = chat_entries[entry_index + 1] if entry_index + 1 < len(chat_entries) else {}
                 analyst_content = next_message.get("content", "") if next_message.get("role") == "analyst" else ""
                 threat_level = next_message.get("threat_level", "low") if analyst_content else "low"
+                guardian_error = next_message.get("guardian_error", "")
 
                 with st.container():
                     st.markdown('<div class="soc-card">', unsafe_allow_html=True)
@@ -544,7 +632,14 @@ def render_main_panel():
                     st.markdown('<div class="soc-card">', unsafe_allow_html=True)
                     st.markdown("[EVALUACIÓN SISTEMA]")
 
-                    if threat_level in ["high", "medium"]:
+                    if guardian_error:
+                        # El Guardian no pudo responder (cuota/clave/red):
+                        # mostrar el motivo real en vez de un "todo seguro" falso.
+                        st.warning(
+                            "GUARDIÁN: no pudo evaluar el prompt (sin veredicto).\n\n"
+                            + str(guardian_error)[:600]
+                        )
+                    elif threat_level in ["high", "medium"]:
                         st.error(
                             f"GUARDIÁN: Bloqueo aplicado. Nivel de amenaza detectado: {threat_level.upper()}"
                         )
@@ -563,8 +658,19 @@ def render_main_panel():
                 with st.container():
                     st.markdown('<div class="soc-card">', unsafe_allow_html=True)
                     st.markdown("[EVALUACIÓN SISTEMA]")
-                    with st.expander("ANALISTA: Detalle técnico", expanded=False):
-                        st.info(content)
+                    rag_used = message.get("rag_used", "ninguno")
+                    rag_arch = message.get("rag_architecture", "desconocido")
+                    rag_label = {
+                        "retriever": "RAGRetriever (lexical)",
+                        "naive": "NaiveRAG",
+                        "advanced": "AdvancedRAG"
+                    }.get(rag_arch, rag_arch)
+                    if rag_used and rag_used != "ninguno":
+                        with st.expander(f"RAG USADO: {rag_label}  —  {rag_used}", expanded=False):
+                            st.info(content)
+                    else:
+                        with st.expander("ANALISTA: Detalle técnico", expanded=False):
+                            st.info(content)
                     st.markdown('</div>', unsafe_allow_html=True)
 
             entry_index += 1

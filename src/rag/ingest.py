@@ -10,45 +10,9 @@ import argparse
 from pathlib import Path
 from typing import List, Tuple
 import json
-import hashlib
-import numpy as np
 
 import chromadb
 from dotenv import load_dotenv
-from google import genai
-
-
-def simple_hash_embedding(text: str, dim: int = 384) -> List[float]:
-    """
-    Generar embedding simple basado en hash + distribución
-    (Para desarrollo/testing sin necesidad de modelos grandes)
-    
-    Args:
-        text: Texto a embedear
-        dim: Dimensión del embedding
-        
-    Returns:
-        Vector de embedding normalizado
-    """
-    try:
-        hash_obj = hashlib.sha256(text.encode()).digest()
-        rng = np.random.RandomState(int.from_bytes(hash_obj[:4], 'big'))
-        embedding = rng.normal(0, 1, dim).astype(np.float32)
-        # Normalizar
-        norm = np.linalg.norm(embedding)
-        if norm > 0:
-            embedding = embedding / norm
-        return embedding.tolist()
-    except:
-        # Fallback si numpy no está disponible
-        import random
-        seed_val = int(hashlib.sha256(text.encode()).hexdigest()[:8], 16)
-        random.seed(seed_val)
-        embedding = [random.gauss(0, 1) for _ in range(dim)]
-        norm = sum(x**2 for x in embedding) ** 0.5
-        if norm > 0:
-            embedding = [x / norm for x in embedding]
-        return embedding
 
 
 class RAGIngestor:
@@ -71,10 +35,12 @@ class RAGIngestor:
             import shutil
             shutil.rmtree(db_path)
         
-        # Usar nueva API de ChromaDB
+        # Usar nueva API de ChromaDB - el modelo por defecto es all-MiniLM-L6-v2 (ONNX)
+        # que produce embeddings de 384 dimensiones con espacio cosine
         self.chroma_client = chromadb.PersistentClient(path=db_path)
         
-        # Obtener o crear colección
+        # Obtener o crear colección - NOTA: no pasamos embeddings personalizados,
+        # Chroma generará los suyos con su modelo por defecto de forma consistente
         self.collection = self.chroma_client.get_or_create_collection(
             name="redteam_corpus",
             metadata={"hnsw:space": "cosine"}
@@ -82,19 +48,6 @@ class RAGIngestor:
         
         print(f"✓ ChromaDB inicializado en {db_path}")
         print(f"✓ Colección 'redteam_corpus' lista")
-        
-    def get_embedding(self, text: str) -> List[float]:
-        """
-        Obtener embedding usando estrategia simple basada en hash
-        (Para desarrollo/testing sin modelos externos)
-        
-        Args:
-            text: Texto a embedear
-            
-        Returns:
-            Vector de embedding normalizado
-        """
-        return simple_hash_embedding(text, dim=384)
     
     def chunk_text(self, text: str, chunk_size: int = 512, overlap: int = 100) -> List[str]:
         """
@@ -145,17 +98,14 @@ class RAGIngestor:
                     if not chunk.strip():
                         continue
                     
-                    # Generar embedding
-                    embedding = self.get_embedding(chunk)
-                    
                     # ID único
                     doc_id = f"{file_path.stem}_chunk_{i}"
                     
-                    # Agregar a ChromaDB
+                    # Agregar a ChromaDB - Chroma generará el embedding con su modelo por defecto
+                    # de forma consistente (all-MiniLM-L6-v2 ONNX, 384d, cosine)
                     self.collection.add(
                         ids=[doc_id],
                         documents=[chunk],
-                        embeddings=[embedding],
                         metadatas=[{
                             "source": file_path.name,
                             "chunk_idx": i,

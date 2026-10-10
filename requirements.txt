@@ -1,6 +1,11 @@
 # API de Google Gemini (nuevo paquete)
 google-genai>=0.1.0
 
+# SDK de OpenAI: usado por el adaptador src/llm_client.py para
+# Groq, OpenRouter, OmniRoute y Ollama (todos exponen endpoints
+# compatibles con OpenAI). Un solo SDK cubre los cuatro.
+openai>=1.40.0
+
 # NLP y embeddings
 # El proyecto usa embeddings locales ligeros en src/rag/ingest.py,
 # así que no instalamos por defecto el stack pesado de Torch/Transformers.

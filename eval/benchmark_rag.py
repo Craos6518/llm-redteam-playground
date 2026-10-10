@@ -16,7 +16,7 @@ import json
 from pathlib import Path
 from typing import List, Dict, Any, Tuple
 
-PROJECT_ROOT = Path(__file__).parent.parent.parent
+PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 # Intentar importar RAGAS, con fallback a implementaciones manuales

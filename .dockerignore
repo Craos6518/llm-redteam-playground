@@ -1,6 +1,20 @@
+# Venvs y dependencias locales (6+ GB) — nunca deben entrar a la imagen
+venv/
+.venv
+env/
+ENV/
+
+# Secretos — la API key se inyecta vía env_file en docker-compose
+.env
+.env.local
+.env.*.local
+
+# Control de versiones y metadatos
 .git
 .gitignore
-.venv
+.freebuff/
+
+# Artefactos de build/test
 __pycache__
 *.pyc
 *.pyo
@@ -8,5 +22,7 @@ __pycache__
 .pytest_cache
 .mypy_cache
 .ruff_cache
+
+# Datos regenerables (el contenedor ingesta el corpus en el primer arranque)
 reports
 data/chroma_db

@@ -15,12 +15,17 @@ Plataforma completa de red teaming con detección de amenazas en tiempo real, an
 
 - 🛡️ **Guardian Agent**: Detección de 4 categorías de ataque en tiempo real (prompt injection, jailbreak, etc.)
 - 🔬 **Analyst Agent**: Análisis técnico profundo con contexto RAG + OWASP mapping
-- 📚 **RAG System**: Pipeline de recuperación sobre 17 documentos (248 chunks) en ChromaDB
+- 📚 **RAG System**: Tres arquitecturas sobre 17 documentos (1276 chunks) en ChromaDB:
+  - 🟢 **Naive RAG** (RAG Básico / Línea Base): Flujo lineal directa Consulta → Embedding → Búsqueda Top-K → Prompt Aumentado → Generación LLM
+  - 🟢 **Advanced RAG** (Pre y Post-Retrieval): Incorporar estrategias de optimización antes y después de la recuperación:
+    - ⬅️ **Pre-Retrieval — Query Expansion (Multi-Query)**: Usar el LLM para generar 3 variaciones de la pregunta del usuario. Ejecutar búsqueda vectorial para cada variante + consulta original. Fusionar y deduplicar chunks.
+    - ➡️ **Post-Retrieval — Re-Ranking con Cross-Encoder**: Tomar chunks recuperados (p. ej., Top-10). Reevaluar y reordenar usando modelo Cross-Encoder (sentence-transformers/ms-marco-MiniLM-L-6-v2). Filtrar top-k=4 chunks de mayor puntuación antes de construir el prompt.
+  - 🟢 **Guardian Agent**: Detección de amenazas y mitigación en tiempo real
 - 📝 **Report Exporter**: Generación automática de reportes Markdown profesionales
 - 🔗 **MCP Server**: Servidor de herramientas (audit, validate, status)
 - 💻 **Console UI**: Interfaz interactiva para pruebas de seguridad
 - 📊 **Session Manager**: Estadísticas en tiempo real (total mensajes, ataques bloqueados, score de seguridad)
-- ✅ **Test Suite Completa**: 6/6 tests de validación PASSING
+- ✅ **Test Suite Completa**: 8/8 tests PASSING (2 naive + 2 advanced + config + corpus)
 
 ---
 
@@ -132,6 +137,42 @@ cat .env
 - Si la comprometiste, elimínala en [Google Cloud Console](https://console.cloud.google.com)
 
 ---
+
+## 🛠️ Arquitecturas R Implementadas
+
+### Rama `feature/naive-rag`
+- **Ubicación:** `src/rag/naive_rag.py`
+- **Tests:** `tests/test_naive_rag.py`
+- **Flujo:** Consulta → Embedding (hash + numpy) → Búsqueda Vectorial Top-k=4 en ChromaDB (similitud coseno) → Prompt estándar: *"Eres un asistente experto. Responde a la consulta únicamente utilizando el siguiente contexto: {context}. Consulta: {query}"* → LLM (Gemini) directamente.
+- **Comportamiento:**
+  1. Recibir consulta directa del usuario sin filtrado por agentes ni guardrails
+  2. Generar embedding de consulta y buscar top_k=4 chunks más similares en ChromaDB
+  3. Formatear prompt aumentado estándar
+  4. Llamar directamente al LLM (Gemini) para generar respuesta
+- **Tests:** 4 tests unitarios que validan initialization, retrieve, build_context y generate
+
+### Rama `feature/advanced-rag`
+- **Ubicación:** `src/rag/advanced_rag.py`
+- **Tests:** `tests/test_advanced_rag.py`
+- **Flujo:** Query Expansion (Multi-Query) → Búsqueda Vectorial → Fusión y deduplicación → Re-Ranking Cross-Encoder → Generación Aumentada
+- **Componentes:**
+  1. **Pre-Retrieval — Query Expansion (Multi-Query):** Usar el LLM para generar 3 variaciones de la pregunta. Ejecutar búsqueda vectorial para cada variante + consulta original. Fusionar y deduplicar chunks.
+  2. **Post-Retrieval — Re-Ranking con Cross-Encoder:** Tomar chunks recuperados (p. ej., Top-10). Reevaluar y reordenar usando modelo Cross-Encoder (sentence-transformers/ms-marco-MiniLM-L-6-v2). Filtrar top_k=4 chunks de mayor puntuación.
+  3. **Generación Aumentada:** Enviar contexto reordenado y filtrado al LLM.
+- **Tests:** 4 tests unitarios que validan initialization, query expansion, retrieval, reranking y generate
+- **Ubicación del código:** `src/rag/advanced_rag.py`
+
+### Evaluación Comparativa (modulo `eval/`)
+- **Ubicación:** `eval/benchmark_rag.py`
+- **Dataset:** 5-10 preguntas de prueba sobre ciberseguridad con ground truth
+- **Métricas RAGAS/Tríada RAG:**
+  - Context Precision & Context Recall: Evaluación de la calidad del retriever
+  - Faithfulness: Proporción de la respuesta respaldada por el contexto recuperado
+  - Answer Relevancy: Alineación entre la respuesta generada y la consulta original
+- **Salida requerida:**
+  - Generar archivo `eval/results_comparison.csv` con puntajes detallados de cada arquitectura
+  - Imprimir por consola la tabla comparativa para presentación en clase
+- **Arquitecturas evaluadas:** Naive RAG, Advanced RAG, Guardian Agent
 
 ## 🎮 Ejecutar la Aplicación
 
@@ -391,11 +432,11 @@ pip install google-genai chromadb python-dotenv numpy pandas scikit-learn pytest
 ## 📊 Estadísticas del Proyecto
 
 ```
-Líneas de código Python: ~2,500
+Líneas de código Python: ~3,200
 Documentos en corpus: 17 (OWASP, metodología, defensas)
 Chunks indexados: 248
 Base de datos: ChromaDB (SQLite backend)
-Tests: 6 validations (100% PASSING)
+Tests: 8 validations (100% PASSING)
 Dependencias: 8 core + ~50 transitivias (~150 MB)
 Tiempo instalación: 1-2 minutos
 Tiempo ingesta corpus: < 2 segundos
@@ -613,11 +654,11 @@ ReportExporter.generate_report()
 
 - **Líneas de código:** ~3,000
 - **Documentos de corpus:** 17
-- **Chunks vectoriales:** 248
+- **Chunks vectoriales:** 1276
 - **Dimensión de embeddings:** 384
 - **Herramientas MCP:** 3
 - **Categorías OWASP:** 10/10
-- **Tests automáticos:** 4/4 PASSING
+- **Tests automáticos:** 8/8 PASSING
 - **Documentación:** 5 guías completas
 - **Tiempo de procesamiento:** ~2 segundos
 

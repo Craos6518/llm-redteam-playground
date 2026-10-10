@@ -3,27 +3,53 @@
 Config Module - Configuración centralizada del proyecto
 Carga variables del .env y expone constantes para todos los módulos
 """
-
 import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Cargar variables de entorno
 load_dotenv()
 
 # ============================================================================
 # API CONFIGURATION
 # ============================================================================
 
-GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
-if not GEMINI_API_KEY:
-    raise ValueError("❌ GEMINI_API_KEY no configurada en .env")
+# API Key de Google Gemini (requerida si usas Gemini como proveedor)
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-GUARDIAN_MODEL = os.getenv('GUARDIAN_MODEL', 'gemini-2.5-flash')
-ANALYST_MODEL = os.getenv('ANALYST_MODEL', 'gemini-2.5-flash')
+# API Key de Groq (opcional, para el proveedor Groq)
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
-# ============================================================================
-# SECURITY CONFIGURATION
+# API Key de OpenRouter (opcional, para el proveedor OpenRouter)
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+
+# Modelo por defecto del provider actual
+GUARDIAN_MODEL = os.getenv("GUARDIAN_MODEL", "gemini-2.5-flash")
+ANALYST_MODEL = os.getenv("ANALYST_MODEL", "gemini-2.5-flash")
+
+# Tiempo de espera por solicitud a LLM (segundos)
+LLM_TIMEOUT = float(os.getenv("LLM_TIMEOUT", "30"))
+
+# Reintentos máximos ante errores 429/503/504
+LLM_MAX_ATTEMPTS = int(os.getenv("LLM_MAX_ATTEMPTS", "5"))
+
+# Conexión al servidor de OmniRoute (localhost:20128/v1)
+LLM_OMNIROUTE_URL = os.getenv("LLM_OMNIROUTE_URL", "http://localhost:20128/v1")
+
+# Conexión al servidor Ollama / LM Studio / vLLM (http://localhost:11434/v1 por defecto)
+LLM_OLLAMA_URL = os.getenv("LLM_OLLAMA_URL", "http://localhost:11434/v1")
+
+# Modelo local a usar (por defecto qwen3:4b)
+LLM_OLLAMA_MODEL = os.getenv("LLM_OLLAMA_MODEL", "qwen3:4b")
+
+# Perfil de proveedor actual (auto, gemini, groq, openrouter, ollama)
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "auto")
+
+# ADAS
+LLM_COT = os.getenv("LLM_COT", "1") == "1"
+
+
+# ===========================================================================
+# CONFIGURACIÓN DE SEGURIDAD
 # ============================================================================
 
 # SECRET_KEY para validación de integridad
@@ -185,39 +211,46 @@ def validate_config() -> bool:
     """Validar que la configuración es correcta"""
     checks = [
         ("GEMINI_API_KEY", GEMINI_API_KEY is not None),
+        ("GROQ_API_KEY", GROQ_API_KEY is not None),
+        ("OPENROUTER_API_KEY", OPENROUTER_API_KEY is not None),
         ("GUARDIAN_MODEL", GUARDIAN_MODEL is not None),
         ("ANALYST_MODEL", ANALYST_MODEL is not None),
         ("RAG_DB_PATH", Path(RAG_DB_PATH).exists()),
         ("CORPUS_PATH", Path(CORPUS_PATH).exists()),
         ("PROJECT_ROOT", PROJECT_ROOT.exists()),
     ]
-    
+
     all_valid = True
     for name, valid in checks:
         status = "✓" if valid else "✗"
         print(f"{status} {name}")
         if not valid:
             all_valid = False
-    
     return all_valid
 
 
 if __name__ == "__main__":
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("CONFIGURACIÓN DEL PROYECTO")
-    print("="*60 + "\n")
-    
+    print("=" * 60 + "\n")
+
     print(f"API Key: {'***' + GEMINI_API_KEY[-8:] if GEMINI_API_KEY else 'NO CONFIGURADA'}")
+    print(f"GROQ API Key: {'***' + GROQ_API_KEY[-8:] if GROQ_API_KEY else 'NO CONFIGURADA'}")
+    print(f"OPENROUTER API Key: {'***' + OPENROUTER_API_KEY[-8:] if OPENROUTER_API_KEY else 'NO CONFIGURADA'}")
     print(f"Guardian Model: {GUARDIAN_MODEL}")
     print(f"Analyst Model: {ANALYST_MODEL}")
+    print(f"LLM Timeout: {LLM_TIMEOUT}")
+    print(f"LLM Max Attempts: {LLM_MAX_ATTEMPTS}")
+    print(f"LLM Provider: {LLM_PROVIDER}")
+    print(f"LLM Model: {LLM_MODEL}")
     print(f"Secret Key: {SECRET_KEY[:20]}...")
     print(f"Project Root: {PROJECT_ROOT}")
     print(f"RAG DB: {RAG_DB_PATH}")
-    
-    print("\n" + "="*60)
+
+    print("\n" + "=" * 60)
     print("VALIDACIÓN")
-    print("="*60 + "\n")
-    
+    print("=" * 60 + "\n")
+
     if validate_config():
         print(f"\n✅ Configuración válida\n")
     else:

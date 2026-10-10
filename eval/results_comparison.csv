@@ -1,0 +1,16 @@
+Arquitectura,Query,Contexto Precision,Contexto Recall,Faithfulness,Answer Relevancy
+naive,¿Qué es prompt injection y cuáles son sus riesgos ,1.0000,0.0714,1.0000,0.4000
+advanced,¿Qué es prompt injection y cuáles son sus riesgos ,1.0000,0.0952,1.0000,0.6000
+guardian,¿Qué es prompt injection y cuáles son sus riesgos ,0.0000,0.0000,0.0000,0.4000
+naive,Explica el concepto de jailbreak en modelos de len,1.0000,0.0517,1.0000,0.5000
+advanced,Explica el concepto de jailbreak en modelos de len,1.0000,0.0690,0.8500,0.7500
+guardian,Explica el concepto de jailbreak en modelos de len,0.0000,0.0000,0.0000,0.6250
+naive,¿Qué es el envenenamiento de datos en sistemas de ,1.0000,0.0667,1.0000,0.4444
+advanced,¿Qué es el envenenamiento de datos en sistemas de ,1.0000,0.0667,1.0000,0.7778
+guardian,¿Qué es el envenenamiento de datos en sistemas de ,0.0000,0.0000,0.0000,0.7778
+naive,Describe el leakage de system prompt y sus implica,1.0000,0.0484,1.0000,0.7000
+advanced,Describe el leakage de system prompt y sus implica,1.0000,0.0645,1.0000,0.7000
+guardian,Describe el leakage de system prompt y sus implica,0.0000,0.0000,0.0000,0.7000
+naive,¿Qué es el excessive agency en LLMs y por qué es p,1.0000,0.0385,1.0000,0.0909
+advanced,¿Qué es el excessive agency en LLMs y por qué es p,1.0000,0.0513,0.8750,0.5455
+guardian,¿Qué es el excessive agency en LLMs y por qué es p,0.0000,0.0000,0.0000,0.5455
