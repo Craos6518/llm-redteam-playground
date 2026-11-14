@@ -31,6 +31,33 @@ Plataforma integral con detección de amenazas en tiempo real, análisis técnic
 
 ---
 
+## ⚡ Ruta rápida: n8n + Ollama + Supabase
+
+Además de la app Streamlit, el repositorio incluye un workflow de n8n que ejecuta
+Guardian, búsqueda híbrida y Analyst contra modelos locales de Ollama y Supabase.
+
+```bash
+# 1. Comprueba Docker, el contenedor n8n, Ollama y los modelos
+./scripts/validate_setup.sh --check
+
+# 2. Si falta algo, instálalo (macOS/Linux)
+./scripts/validate_setup.sh
+
+# 3. Sigue la guía para Supabase, credenciales e ingesta del corpus
+```
+
+| Recurso | Enlace |
+|---|---|
+| Script de validación/instalación | [`scripts/validate_setup.sh`](scripts/validate_setup.sh) |
+| Guía de configuración para principiantes | [`docs/CONFIGURACION_PASO_A_PASO.md`](docs/CONFIGURACION_PASO_A_PASO.md) |
+| Workflow listo para importar | [`n8n/llm_redteam_workflow.json`](n8n/llm_redteam_workflow.json) |
+| Esquema de Supabase | [`n8n/llm_redteam_setup.sql`](n8n/llm_redteam_setup.sql) |
+| Detalle técnico y pruebas | [`n8n/README.md`](n8n/README.md) |
+
+Webhook de producción: `POST http://localhost:5678/webhook/redteam`
+
+---
+
 ## 🏗️ Arquitectura y Componentes del Sistema
 
 ### 1. Agentes Inteligentes
@@ -775,6 +802,8 @@ Para problemas o preguntas:
 | Guía MCP y Skills | [docs/SKILLS_MCP_GUIDE.md](docs/SKILLS_MCP_GUIDE.md) | 10.6 KB | 🔧 Guía técnica de MCP + skills |
 | Guía Streamlit | [docs/STREAMLIT_GUIDE.md](docs/STREAMLIT_GUIDE.md) | 10.6 KB | 📖 Guía de usuario de la interfaz web |
 | Guión de Presentación | [docs/PRESENTATION_SCRIPT.md](docs/PRESENTATION_SCRIPT.md) | 8 KB | Guión de presentación oral (10 min) |
+| Configuración n8n paso a paso | [docs/CONFIGURACION_PASO_A_PASO.md](docs/CONFIGURACION_PASO_A_PASO.md) | - | Corpus, Supabase, credenciales y red Docker/Ollama |
+| Workflow n8n | [n8n/README.md](n8n/README.md) | - | Correcciones, pruebas y limitaciones del workflow |
 | Estructura General | [PROYECTO_ESTRUCTURA.md](PROYECTO_ESTRUCTURA.md) | - | Estructura general actualizada |
 
 ---

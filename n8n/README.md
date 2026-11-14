@@ -62,6 +62,20 @@ Ollama corre en CPU con límite de **6 GB** de memoria. Por eso Guardian y Analy
 
 ## 3. Puesta en marcha
 
+> **Guía para principiantes:** [`docs/CONFIGURACION_PASO_A_PASO.md`](../docs/CONFIGURACION_PASO_A_PASO.md)
+> explica dónde está el corpus, cómo crear el proyecto Supabase, cómo obtener las
+> credenciales y cómo conectar Docker con Ollama.
+>
+> **Script de validación:** [`scripts/validate_setup.sh`](../scripts/validate_setup.sh)
+> comprueba e instala Docker, el contenedor `n8n_local`, Ollama y los modelos en macOS
+> y Linux:
+>
+> ```bash
+> ./scripts/validate_setup.sh --check   # solo validar
+> ./scripts/validate_setup.sh           # validar e instalar lo que falte
+> ./scripts/validate_setup.sh --yes     # sin confirmaciones
+> ```
+
 ### 3.1 Supabase
 
 1. Abrir **SQL Editor** y ejecutar `n8n/llm_redteam_setup.sql` **solo si la base está vacía**.
