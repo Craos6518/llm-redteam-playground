@@ -156,6 +156,16 @@ Debe devolver `200`.
 
 ### 3.5 Probar el webhook
 
+| URL | Uso |
+|---|---|
+| `http://localhost:5678/webhook-test/redteam` | Solo mientras el editor está escuchando (**Listen for test event**). |
+| `http://localhost:5678/webhook/redteam` | Producción: workflow activo/publicado. Es la que deben usar bots y clientes reales. |
+
+Cualquier cliente que haga `POST` con `{"session_id":"...","prompt":"..."}` puede
+consultar el workflow. Para conectar Telegram (BotFather), WhatsApp o una interfaz
+web, ver la sección **7.5** de
+[`docs/CONFIGURACION_PASO_A_PASO.md`](../docs/CONFIGURACION_PASO_A_PASO.md).
+
 Ruta bloqueada:
 
 ```bash

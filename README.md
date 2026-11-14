@@ -54,7 +54,12 @@ Guardian, búsqueda híbrida y Analyst contra modelos locales de Ollama y Supaba
 | Esquema de Supabase | [`n8n/llm_redteam_setup.sql`](n8n/llm_redteam_setup.sql) |
 | Detalle técnico y pruebas | [`n8n/README.md`](n8n/README.md) |
 
-Webhook de producción: `POST http://localhost:5678/webhook/redteam`
+- Webhook de producción: `POST http://localhost:5678/webhook/redteam`
+- Webhook de prueba: `POST http://localhost:5678/webhook-test/redteam` (solo con el editor escuchando)
+
+Cualquier cliente que haga `POST` con `{"session_id":"...","prompt":"..."}` puede
+consultar el workflow. La guía incluye ejemplos para Telegram (BotFather), WhatsApp
+y una interfaz web.
 
 ---
 
